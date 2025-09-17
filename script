@@ -1,0 +1,134 @@
+import pyfiglet
+import sys
+import re
+import datetime
+import os
+
+def transactionLog(user,action,amount):
+    motive = input('Motive: ')
+    userLog = (f'{user}_transactions.txt')
+    with open(userLog, "a") as logfile:
+        logfile.write(datetime.datetime.now().strftime("[%d/%m/%Y %H:%M:%S] ") + f'{user} {action} ${str(amount)} for {motive} \n')
+
+def balanceChange(user,newbalance):
+    updated_lines = []
+    with open('database.txt','r') as db:
+        lines = db.readlines()
+        for line in lines:
+            try:
+                parts = re.split(r',', line)
+                name = parts[0].strip().title()
+                number = parts[1].strip()
+                balance = parts[2].strip()
+                if user == name:
+                    updated_lines.append(f"{name},{number},{newbalance}\n")
+                else:
+                    updated_lines.append(f"{name},{number},{balance}\n")
+            except ValueError as err:
+                print(err)
+        with open('database.txt', 'w') as db:
+            for line in updated_lines:
+                db.write(line)
+
+
+def userLogin():
+    print('Log into your account')
+    loginUser = []
+    with open('database.txt', "r") as file:
+        lines = file.readlines()
+        for line in lines:
+            try:
+                parts = re.split(r',', line)
+                name = parts[0].strip().title()
+                number = parts[1].strip()
+                balance = parts[2].strip()
+                loginUser.append((name, number))
+            except ValueError as err:
+                print(err)
+        for tries in range(3):
+            nameInput = input("username: ")
+            numberInput = input("password: ")
+            print('-' * 30)
+            if (nameInput, numberInput) in loginUser:
+                print('Successfully logged in')
+                break
+        else:
+            print('Too many tries, login failed.')
+            sys.exit()
+        return (nameInput, numberInput,balance)
+
+def checkbalance(currentbalance):
+    print('Current balance: $' + str(currentbalance))
+    pass
+
+def deposit(currentbalance,user):
+    action = 'deposited'
+    print('\nEnter your desired deposit amount')
+    while True:
+        amount = input('>>> $')
+        try:
+            amount = float(amount)
+        except ValueError as err:
+            print('Amount Invalid.')
+            continue
+        if amount < 0:
+            print('Deposit cannot be negative')
+        else:
+            break
+    currentbalance += amount
+    print(f'Successfully deposited: ${amount}')
+    transactionLog(user,action, amount)
+    balanceChange(user, currentbalance)
+    return currentbalance
+
+def withdraw(currentbalance,user):
+    action = 'withdrew'
+    print('\nEnter your desired withdraw amount')
+    while True:
+        try:
+            withdrawamount = input('>>> $')
+            if not withdrawamount.isnumeric():
+                raise ValueError ('Withdraw invalid.')
+            if float(withdrawamount) > currentbalance:
+                raise ValueError('You do not have enough funds!')
+            if float(withdrawamount) < 0:
+                raise ValueError('Withdraw invalid.')
+            else:
+                break
+        except ValueError as err:
+            print('❌Error:', err)
+    currentbalance -= float(withdrawamount)
+    print(f'Successfully withdrawn: ${withdrawamount}')
+    transactionLog(user, action, withdrawamount)
+    balanceChange(user, currentbalance)
+    return currentbalance
+
+
+
+if __name__ == '__main__':
+    print('-' * 50)
+    ascii_banner = pyfiglet.figlet_format(f"ATM SIMULATOR")
+    print(ascii_banner)
+    print('-' * 50)
+    (name,number,balance) = userLogin()
+    balance = float(balance)
+    while True:
+        print('')
+        print('-' * 30)
+        print(f'Welcome to ATM SIMULATOR {name}!')
+        print('-' * 30)
+        print('1. Check Balance')
+        print('2. Deposit')
+        print('3. Withdraw')
+        print('4. Exit')
+        userChoice = input(">>> ")
+        if userChoice == "1":
+            checkbalance(balance)
+        elif userChoice == "2":
+            balance = deposit(balance,name)
+        elif userChoice == "3":
+            balance = withdraw(balance,name)
+        elif userChoice == "4":
+            sys.exit()
+        else:
+            print('Invalid Input.')
